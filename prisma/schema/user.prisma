@@ -1,16 +1,16 @@
-
 model User {
   id                 String     @id @default(uuid())
   email              String     @unique
+  password           String
   role               UserRole   @default(Patient)
   needPasswordChange Boolean    @default(true)
   status             UserStatus @default(Active)
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
-  admin     Admin?
-  doctor    Doctor?
-  patient   Patient?
+  admin   Admin?
+  doctor  Doctor?
+  patient Patient?
 
   @@map("users")
 }
@@ -58,7 +58,8 @@ model Patient {
   name          String
   email         String   @unique
   profilePhoto  String?
-  contactNumber String
+  address       String?
+  contactNumber String?
   isDeleted     Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

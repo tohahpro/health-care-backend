@@ -6,14 +6,14 @@ import { Admin, Doctor, UserRole } from "@prisma/client";
 
 
 const createPatient = async (req: Request) => {
-    if(req.file){
+    if (req.file) {
         const uploadResult = await fileUploader.uploadToCloudinary(req.file)
         req.body.patient.profilePhoto = uploadResult?.secure_url
-        
+
     }
     const hashPassword = await bcrypt.hash(req.body.password, 10);
 
-    const result = await prisma.$transaction(async (tnx)=>{
+    const result = await prisma.$transaction(async (tnx) => {
         await tnx.user.create({
             data: {
                 email: req.body.patient.email,
@@ -89,8 +89,19 @@ const createDoctor = async (req: Request): Promise<Doctor> => {
     return result;
 }
 
+const getAllFromDB = async ({ page, limit }: { page: number, limit: number }) => {
+    const skip = (page - 1) * limit;    
+    const result = await prisma.user.findMany({
+        skip,
+        take: limit
+    });
+    return result
+}
+
 export const UserService = {
     createPatient,
     createAdmin,
-    createDoctor
+    createDoctor,
+    getAllFromDB,
+
 }

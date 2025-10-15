@@ -2,6 +2,7 @@ import { UserStatus } from "@prisma/client"
 import { prisma } from "../../shared/prisma"
 import bcrypt from "bcryptjs"
 import { jwtHelper } from "../../helper/jwtHelper"
+import config from "../../../config"
 
 
 const login = async (payload: { email: string, password: string }) => {
@@ -13,15 +14,19 @@ const login = async (payload: { email: string, password: string }) => {
     })
 
     const isCorrectPassword = await bcrypt.compare(payload.password, user.password)
-    if(!isCorrectPassword){
+    if (!isCorrectPassword) {
         throw new Error("Password is incorrect.")
     }
-    const accessToken = jwtHelper.generateToken({email: user.email, role: user.role}, "secret_key", "1h")
+    const jwtPayload = {
+        email: user.email,
+        role: user.role
+    }
+    const accessToken = jwtHelper.generateToken(jwtPayload, config.JWT.JWT_ACCESS_SECRET as string, config.JWT.JWT_ACCESS_EXPIRES as string)
 
-    const refreshToken = jwtHelper.generateToken({email: user.email, role: user.role}, "secret_key_change", "80d")
+    const refreshToken = jwtHelper.generateToken(jwtPayload, config.JWT.JWT_REFRESH_SECRET as string, config.JWT.JWT_REFRESH_EXPIRES as string)
 
     return {
-        accessToken, 
+        accessToken,
         refreshToken,
         needPasswordChange: user.needPasswordChange
     };

@@ -107,9 +107,18 @@ const schedulesForDoctor = async (options: IOptions, filters: any) => {
     }
 }
 
+const deleteScheduleFromDB = async (id: string) => {    
+    if(!id){
+        Error("Schedule are not exits!")
+    }
+    return await prisma.schedule.delete({
+        where: {id}
+    })
+}
 
 export const ScheduleService = {
     insertIntoDB,
     schedulesForDoctor,
+    deleteScheduleFromDB,
 
 }

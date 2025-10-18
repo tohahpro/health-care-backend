@@ -2,6 +2,7 @@ import { addMinutes, addHours, format } from "date-fns";
 import { prisma } from "../../shared/prisma";
 import { IOptions, paginationHelper } from "../../helper/paginationHelper";
 import { Prisma } from "@prisma/client";
+import { IJWTPayload } from "../../types";
 
 const insertIntoDB = async (payload: any) => {
 
@@ -62,7 +63,7 @@ const insertIntoDB = async (payload: any) => {
     return schedules;
 }
 
-const schedulesForDoctor = async (options: IOptions, filters: any) => {
+const schedulesForDoctor = async (user: IJWTPayload, options: IOptions, filters: any) => {
     const { page, limit, skip, sortBy, sortOrder } = paginationHelper.calculatePagination(options)
     const { startDateTime: filterStartDateTime, endDateTime: filterEndDateTime } = filters;
 
@@ -88,15 +89,39 @@ const schedulesForDoctor = async (options: IOptions, filters: any) => {
         AND: andConditions
     } : {}
 
+    const doctorSchedules = await prisma.doctorSchedules.findMany({
+        where: {
+            doctor: {
+                email: user.email
+            }
+        },
+        select: {
+            scheduleId : true
+        }
+    })
+
+    const doctorScheduleIds = doctorSchedules.map(schedule => schedule.scheduleId)
+
     const result = await prisma.schedule.findMany({
-        where : whereConditions,
+        where: {
+            ...whereConditions,
+            id: {
+                notIn: doctorScheduleIds
+            }
+        },
         skip, take: limit,
         orderBy: {
-            [sortBy] : sortOrder
-        }        
+            [sortBy]: sortOrder
+        }
     });
+
     const total = await prisma.schedule.count({
-        where: whereConditions
+        where: {
+            ...whereConditions,
+            id: {
+                notIn: doctorScheduleIds
+            }
+        },
     });
 
     return {
@@ -107,12 +132,12 @@ const schedulesForDoctor = async (options: IOptions, filters: any) => {
     }
 }
 
-const deleteScheduleFromDB = async (id: string) => {    
-    if(!id){
+const deleteScheduleFromDB = async (id: string) => {
+    if (!id) {
         Error("Schedule are not exits!")
     }
     return await prisma.schedule.delete({
-        where: {id}
+        where: { id }
     })
 }
 

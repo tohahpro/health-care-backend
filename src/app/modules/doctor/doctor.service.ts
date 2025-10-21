@@ -1,7 +1,8 @@
-import { Prisma } from "@prisma/client"
+import { Doctor, Prisma } from "@prisma/client"
 import { IOptions, paginationHelper } from "../../helper/paginationHelper"
 import { doctorSearchableFields } from "./doctor.constant"
 import { prisma } from "../../shared/prisma"
+import { IDoctorUpdateInput } from "./doctor.interface"
 
 
 const getAllDoctors = async (options: IOptions, filters: any) => {
@@ -57,7 +58,54 @@ const getAllDoctors = async (options: IOptions, filters: any) => {
     }
 }
 
+const updateDoctorProfile = async (id: string, payload: Partial<IDoctorUpdateInput>) => {
+
+    const doctorInfo = await prisma.doctor.findUniqueOrThrow({
+        where: { id }
+    })
+
+    const {specialties, ...doctorData} = payload;
+    if(specialties && specialties.length > 0){
+        const deleteSpecialtyIds = specialties.filter((specialty)=> specialty.isDeleted)
+        for(const specialty of deleteSpecialtyIds){
+            await prisma.doctorSpecialties.deleteMany({
+                where : {
+                    doctorId : id,
+                    specialitiesId : specialty.specialtyId
+                }
+            })
+        }
+
+        const createSpecialtyIds = specialties.filter((specialty)=> !specialty.isDeleted)
+        for(const specialty of createSpecialtyIds){
+            await prisma.doctorSpecialties.create({
+                data : {
+                    doctorId : id,
+                    specialitiesId : specialty.specialtyId
+                }
+            })
+        }
+
+    }
+
+    const updateData = await prisma.doctor.update({
+        where: {
+            id: doctorInfo.id
+        },
+        data: doctorData,
+        include: {
+            doctorSpecialties: {
+                include: {
+                    specialities: true
+                }
+            }
+        }
+    })
+    return updateData
+}
+
 export const DoctorService = {
     getAllDoctors,
+    updateDoctorProfile,
 
 }

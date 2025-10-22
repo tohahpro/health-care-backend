@@ -5,6 +5,18 @@ import { DoctorService } from "./doctor.service";
 import { pick } from "../../helper/pick";
 import { doctorFilterableFields } from "./doctor.constant";
 
+const getAiSuggestions = catchAsync(async (req: Request, res: Response) => {
+    
+    const payload = req.body;
+    const result = await DoctorService.getAiSuggestions(payload);
+
+    sendResponse(res, {
+        statusCode: 200,
+        success: true,
+        message: "AI suggestions retrieved successfully!",
+        data: result
+    })
+});
 
 const getAllDoctors = catchAsync(async (req: Request, res: Response) => {
     const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"])
@@ -39,5 +51,6 @@ const updateDoctorProfile = catchAsync(async (req: Request, res: Response) => {
 export const DoctorController = {
     getAllDoctors,
     updateDoctorProfile,
+    getAiSuggestions,
 
 }

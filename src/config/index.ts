@@ -19,6 +19,7 @@ export default {
         
         JWT_REFRESH_SECRET : process.env.JWT_REFRESH_SECRET,
         JWT_REFRESH_EXPIRES : process.env.JWT_REFRESH_EXPIRES,
-    }
+    },
+    open_router_api_key: process.env.ROUTER_API_KEY
 
 }

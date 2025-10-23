@@ -7,8 +7,8 @@ model Appointment {
     scheduleId     String
     schedule       Schedule          @relation(fields: [scheduleId], references: [id])
     videoCallingID String?
-    status         AppointmentStatus
-    paymentStatus  PaymentStatus
+    status         AppointmentStatus @default(SCHEDULE)
+    paymentStatus  PaymentStatus     @default(Unpaid)
     createdAt      DateTime          @default(now())
     updatedAt      DateTime          @updatedAt
 

@@ -1,4 +1,4 @@
-import { Doctor, Prisma } from "@prisma/client"
+import { Doctor, Prisma, UserStatus } from "@prisma/client"
 import { IOptions, paginationHelper } from "../../helper/paginationHelper"
 import { doctorSearchableFields } from "./doctor.constant"
 import { prisma } from "../../shared/prisma"
@@ -185,9 +185,79 @@ const updateDoctorProfile = async (id: string, payload: Partial<IDoctorUpdateInp
 
 }
 
+const getDoctorById = async (id: string): Promise<Doctor | null> => {
+    
+    const result = await prisma.doctor.findUnique({
+        where: {
+            id,
+            isDeleted: false,
+        },
+        include: {
+            doctorSpecialties: {
+                include: {
+                    specialities: true,
+                },
+            },
+            doctorSchedules: {
+                include: {
+                    schedule: true
+                }
+            }
+        },
+    });
+    if(!result){
+        throw new ApiError(httpStatus.NOT_FOUND,"Doctor not found");
+    }
+    return result;
+};
+
+const deleteDoctorFromDB = async (id: string): Promise<Doctor> => {
+    return await prisma.$transaction(async (transactionClient) => {
+        const deleteDoctor = await transactionClient.doctor.delete({
+            where: {
+                id,
+            },
+        });
+
+        await transactionClient.user.delete({
+            where: {
+                email: deleteDoctor.email,
+            },
+        });
+
+        return deleteDoctor;
+    });
+};
+
+const softDelete = async (id: string): Promise<Doctor> => {
+    return await prisma.$transaction(async (transactionClient) => {
+        const deleteDoctor = await transactionClient.doctor.update({
+            where: { id },
+            data: {
+                isDeleted: true,
+            },
+        });
+
+        await transactionClient.user.update({
+            where: {
+                email: deleteDoctor.email,
+            },
+            data: {
+                status: UserStatus.Deleted,
+            },
+        });
+
+        return deleteDoctor;
+    });
+};
+
+
 export const DoctorService = {
     getAllDoctors,
+    getDoctorById,
     updateDoctorProfile,
-    getAiSuggestions
+    getAiSuggestions,
+    deleteDoctorFromDB,
+    softDelete
 
 }

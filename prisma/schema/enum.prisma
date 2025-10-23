@@ -16,7 +16,7 @@ enum Gender {
 }
 
 enum AppointmentStatus {
-  Scheduled
+  SCHEDULE
   InProgress
   Completed
   Cancelled

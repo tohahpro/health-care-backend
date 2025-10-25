@@ -1,9 +1,12 @@
-import { Prisma, UserRole } from "@prisma/client";
+import httpStatus from 'http-status';
+import { AppointmentStatus, Prisma, UserRole } from "@prisma/client";
 import { paginationHelper } from "../../helper/paginationHelper";
 import { stripe } from "../../helper/stripe";
 import { prisma } from "../../shared/prisma";
 import { IJWTPayload } from "../../types";
 import { v4 as uuidv4 } from "uuid";
+import ApiError from "../../errors/ApiError";
+
 
 const createAppointment = async (user: IJWTPayload, payload: { doctorId: string, scheduleId: string }) => {
     // Check if patient exists
@@ -209,8 +212,40 @@ const getAllAppointments = async (filters: any, options: any) => {
 
 };
 
+const updateAppointmentStatus = async (user: IJWTPayload, appointmentId: string, status: AppointmentStatus) => {
+    const appointmentData = await prisma.appointment.findUnique({
+        where: {
+            id: appointmentId
+        },
+        include: {
+            doctor: true
+        }
+    });
+
+    if (!appointmentData) {
+        throw new Error("Appointment not found");
+    }
+
+    if (user.role === UserRole.Doctor) {
+        if (!(user.email === appointmentData.doctor.email)) {
+            throw new ApiError(httpStatus.BAD_REQUEST, "You are not authorized to update this appointment");
+        }
+
+        const updatedAppointment = await prisma.appointment.update({
+            where: {
+                id: appointmentId
+            },
+            data: {
+                status: status
+            }
+        })
+        return updatedAppointment;  
+    }
+}
+
 export const AppointmentService = {
     createAppointment,
     getMyAppointments,
     getAllAppointments,
+    updateAppointmentStatus,
 };

@@ -1,3 +1,4 @@
+import { PaymentController } from './app/modules/payment/payment.controller';
 import express, { Application, NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 import globalErrorHandler from './app/middlewares/globalErrorHandler';
@@ -7,6 +8,11 @@ import cookieParser from 'cookie-parser';
 import router from './app/routes';
 
 const app: Application = express();
+app.post(
+    '/webhook',
+    express.raw({ type: 'application/json' }),
+    PaymentController.handleStripeWebhookEvent
+)
 app.use(cors({
     origin: 'http://localhost:3000',
     credentials: true

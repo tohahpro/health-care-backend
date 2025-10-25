@@ -116,6 +116,11 @@ const getAllDoctors = async (options: IOptions, filters: any) => {
                 include: {
                     specialities: true
                 }
+            },
+            reviews: {
+                select: {
+                    rating: true
+                }
             }
         }
     })
@@ -202,7 +207,8 @@ const getDoctorById = async (id: string): Promise<Doctor | null> => {
                 include: {
                     schedule: true
                 }
-            }
+            },
+            reviews: true
         },
     });
     if(!result){

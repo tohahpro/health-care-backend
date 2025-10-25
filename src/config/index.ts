@@ -19,6 +19,14 @@ export default {
         
         JWT_REFRESH_SECRET : process.env.JWT_REFRESH_SECRET,
         JWT_REFRESH_EXPIRES : process.env.JWT_REFRESH_EXPIRES,
+        
+        RESET_PASS_SECRET : process.env.RESET_PASS_SECRET,
+        RESET_PASS_TOKEN_EXPIRES : process.env.RESET_PASS_TOKEN_EXPIRES_IN,
+        RESET_PASS_LINK : process.env.RESET_PASS_LINK,
+    },
+    emailSender: {
+        email: process.env.EMAIL,
+        app_pass: process.env.APP_PASS
     },
     open_router_api_key: process.env.ROUTER_API_KEY,
     stripeSecretKey: process.env.STRIPE_SECRET_KEY,

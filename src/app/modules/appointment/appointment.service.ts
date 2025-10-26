@@ -1,5 +1,5 @@
 import httpStatus from 'http-status';
-import { AppointmentStatus, Prisma, UserRole } from "@prisma/client";
+import { AppointmentStatus, PaymentStatus, Prisma, UserRole } from "@prisma/client";
 import { paginationHelper } from "../../helper/paginationHelper";
 import { stripe } from "../../helper/stripe";
 import { prisma } from "../../shared/prisma";
@@ -239,8 +239,56 @@ const updateAppointmentStatus = async (user: IJWTPayload, appointmentId: string,
                 status: status
             }
         })
-        return updatedAppointment;  
+        return updatedAppointment;
     }
+}
+
+const cancelUnpaidAppointments = async () => {
+    const twentyMinutesAgo = new Date(Date.now() - 20 * 60 * 1000);
+
+    const unpaidAppointments = await prisma.appointment.findMany({
+        where: {
+            createdAt: {
+                lte: twentyMinutesAgo
+            },
+            paymentStatus: PaymentStatus.Unpaid
+        }
+    });
+
+    const appointmentIdsToCancel = unpaidAppointments.map(appointment => appointment.id);
+
+    await prisma.$transaction(async (tnx) => {
+        await tnx.payment.deleteMany({
+            where: {
+                appointmentId: {
+                    in: appointmentIdsToCancel
+                }
+            }
+        });
+
+        await tnx.appointment.deleteMany({
+            where: {
+                id: {
+                    in: appointmentIdsToCancel
+                }
+            }
+        });
+
+        for (const unpaidAppointment of unpaidAppointments) {
+            await tnx.doctorSchedules.update({
+                where: {
+                    doctorId_scheduleId: {
+                        doctorId: unpaidAppointment.doctorId,
+                        scheduleId: unpaidAppointment.scheduleId
+                    }
+                },
+                data: {
+                    isBooked: false
+                }
+            })
+        };
+    });
+
 }
 
 export const AppointmentService = {
@@ -248,4 +296,5 @@ export const AppointmentService = {
     getMyAppointments,
     getAllAppointments,
     updateAppointmentStatus,
+    cancelUnpaidAppointments,
 };

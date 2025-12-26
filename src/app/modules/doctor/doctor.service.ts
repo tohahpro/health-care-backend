@@ -77,12 +77,15 @@ const getAllDoctors = async (options: IOptions, filters: any) => {
     }
 
     if (specialties && specialties.length > 0) {
-        andConditions.push({
+      // Convert to array if single string
+      const specialtiesArray = Array.isArray(specialties) ? specialties : [specialties];  
+      
+      andConditions.push({
             doctorSpecialties: {
                 some: {
                     specialities: {
                         title: {
-                            contains: specialties,
+                            in: specialtiesArray,
                             mode: "insensitive"
                         }
                     }
@@ -101,6 +104,10 @@ const getAllDoctors = async (options: IOptions, filters: any) => {
         andConditions.push(...filterConditions)
     }
 
+    andConditions.push({
+      isDeleted: false,
+    });
+
     const whereConditions: Prisma.DoctorWhereInput = andConditions.length > 0 ? { AND: andConditions } : {}
 
 
@@ -108,9 +115,10 @@ const getAllDoctors = async (options: IOptions, filters: any) => {
         where: whereConditions,
         skip,
         take: limit,
-        orderBy: {
-            [sortBy]: sortOrder
-        },
+        orderBy: 
+            options.sortBy && options.sortOrder
+            ? { [options.sortBy]: options.sortOrder }
+            : { averageRating: "desc" },
         include: {
             doctorSpecialties: {
                 include: {

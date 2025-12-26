@@ -1,20 +1,23 @@
 import { Gender } from "@prisma/client";
 
 export type IDoctorUpdateInput = {
-    email: string;
-    contactNumber: string;
-    experience: number;
-    gender: Gender;
-    appointmentFee: number;
-    name: string;
-    address: string;
-    registrationNumber: string;
-    qualification: string;
-    currentWorkingPlace: string;
-    designation: string;
-    isDeleted: boolean;
-    specialties: {
-        specialtyId: string;
-        isDeleted?: boolean;
-    }[]
-}
+  name?: string;
+  profilePhoto?: string;
+  contactNumber?: string;
+  address?: string;
+  registrationNumber?: string;
+  experience?: number;
+  gender?: Gender;
+  appointmentFee?: number;
+  qualification?: string;
+  currentWorkingPlace?: string;
+  designation?: string;
+  // NEW: Simplified specialty management
+  specialties?: string[]; // Array of specialty IDs to add
+  removeSpecialties?: string[]; // Array of specialty IDs to remove
+};
+
+export type ISpecialties = {
+  specialtiesId: string;
+  isDeleted?: null;
+};

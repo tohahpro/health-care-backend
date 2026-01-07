@@ -35,6 +35,19 @@ const getMyAppointments = catchAsync(async (req: Request & { user?: IJWTPayload 
     })
 });
 
+const getAppointmentsById = catchAsync(async (req: Request, res: Response) => {
+    
+    const id = req.params.id;
+    const result = await AppointmentService.getAppointmentsById(id);
+
+    sendResponse(res, {
+        statusCode: 200,
+        success: true,
+        message: "Fetched appointment by Id successfully!",
+        data: result   
+    })
+});
+
 const getAllAppointments = catchAsync(async (req: Request & { user?: IJWTPayload }, res: Response) => {
     const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"])
     const filters = pick(req.query, ["status", "paymentStatus"])
@@ -70,4 +83,5 @@ export const AppointmentController = {
     getMyAppointments,
     getAllAppointments,
     updateAppointmentStatus,
+    getAppointmentsById,
 }

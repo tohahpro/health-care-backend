@@ -12,7 +12,8 @@ const login = catchAsync(async (req: Request, res: Response)=>{
     res.cookie("accessToken", accessToken, {
         secure: true,
         httpOnly: true,
-        sameSite: "none"
+        sameSite: "none",
+        maxAge: 1000 * 60 * 60 * 24 * 30
     })
     res.cookie("refreshToken", refreshToken, {
         secure: true,

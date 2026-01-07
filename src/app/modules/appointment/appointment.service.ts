@@ -212,6 +212,18 @@ const getAllAppointments = async (filters: any, options: any) => {
 
 };
 
+const getAppointmentsById = async (id: string) => {   
+
+    const result = await prisma.appointment.findUniqueOrThrow({
+        where: {id},        
+        include: {
+            patient: true,
+            doctor: true
+        },
+    })
+    return result;
+};
+
 const updateAppointmentStatus = async (user: IJWTPayload, appointmentId: string, status: AppointmentStatus) => {
     const appointmentData = await prisma.appointment.findUnique({
         where: {
@@ -295,6 +307,7 @@ export const AppointmentService = {
     createAppointment,
     getMyAppointments,
     getAllAppointments,
+    getAppointmentsById,
     updateAppointmentStatus,
     cancelUnpaidAppointments,
 };

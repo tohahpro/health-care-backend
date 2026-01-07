@@ -8,6 +8,7 @@ const router = express.Router();
 router.post("/", auth(UserRole.Patient), AppointmentController.createAppointment)
 router.get('/', auth(UserRole.Admin), AppointmentController.getAllAppointments);
 router.get('/my-appointments', auth(UserRole.Patient, UserRole.Doctor), AppointmentController.getMyAppointments);
-router.patch('/:id', auth(UserRole.Doctor, UserRole.Admin), AppointmentController.updateAppointmentStatus);
+router.get('/:id', auth(UserRole.Admin), AppointmentController.getAppointmentsById);
+router.patch('/status/:id', auth(UserRole.Doctor, UserRole.Admin), AppointmentController.updateAppointmentStatus);
 
 export const AppointmentRoutes = router;

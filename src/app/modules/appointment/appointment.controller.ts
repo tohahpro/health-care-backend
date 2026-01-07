@@ -4,6 +4,7 @@ import { AppointmentService } from "./appointment.service";
 import sendResponse from "../../shared/sendResponse";
 import { IJWTPayload } from "../../types";
 import { pick } from "../../helper/pick";
+import { appointmentFilterableFields } from "./appointment.constant";
 
 
 
@@ -50,7 +51,7 @@ const getAppointmentsById = catchAsync(async (req: Request, res: Response) => {
 
 const getAllAppointments = catchAsync(async (req: Request & { user?: IJWTPayload }, res: Response) => {
     const options = pick(req.query, ["page", "limit", "sortBy", "sortOrder"])
-    const filters = pick(req.query, ["status", "paymentStatus"])
+    const filters = pick(req.query, appointmentFilterableFields)
     
     const user = req.user;
     const result = await AppointmentService.getAllAppointments(filters, options);

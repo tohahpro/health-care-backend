@@ -5,6 +5,7 @@ import { UserService } from "./user.service";
 import sendResponse from "../../shared/sendResponse";
 import { pick } from "../../helper/pick";
 import { IJWTPayload } from '../../types';
+import { IAuthUser } from '../../interfaces/common';
 
 const createPatient = catchAsync(async (req: Request, res: Response) => {
     const result = await UserService.createPatient(req)
@@ -82,6 +83,19 @@ const changeProfileStatus = catchAsync(async (req: Request, res: Response) => {
     })
 });
 
+const updateMyProfie = catchAsync(async (req: Request & { user?: IAuthUser }, res: Response) => {
+
+    const user = req.user;
+    const result = await UserService.updateMyProfie(user as IAuthUser, req);
+
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: "My profile updated!",
+        data: result
+    })
+});
+
 export const UserController = {
     createPatient,
     createAdmin,
@@ -89,5 +103,5 @@ export const UserController = {
     getAllFromDB,
     getMyProfile,
     changeProfileStatus,
-
+    updateMyProfie
 }

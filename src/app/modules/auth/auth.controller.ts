@@ -1,13 +1,13 @@
-import  httpStatus  from 'http-status';
+import httpStatus from 'http-status';
 import { Request, Response } from "express"
 import catchAsync from "../../shared/catchAsync"
 import { AuthService } from "./auth.service"
 import sendResponse from "../../shared/sendResponse"
 
-const login = catchAsync(async (req: Request, res: Response)=>{
-    
+const login = catchAsync(async (req: Request, res: Response) => {
+
     const result = await AuthService.login(req.body)
-    const {accessToken, refreshToken, needPasswordChange} = result
+    const { accessToken, refreshToken, needPasswordChange } = result
 
     res.cookie("accessToken", accessToken, {
         secure: true,
@@ -30,25 +30,25 @@ const login = catchAsync(async (req: Request, res: Response)=>{
     })
 })
 
-const logout = catchAsync(async (req: Request, res: Response)=>{
-    
-    res.clearCookie("accessToken",{
+const logout = catchAsync(async (req: Request, res: Response) => {
+
+    res.clearCookie("accessToken", {
         httpOnly: true,
         secure: true,
         sameSite: "none"
     })
 
-    res.clearCookie("refreshToken",{
+    res.clearCookie("refreshToken", {
         httpOnly: true,
         secure: true,
         sameSite: "none"
     })
 
-    sendResponse(res,{
+    sendResponse(res, {
         success: true,
         statusCode: httpStatus.OK,
         message: 'User logged out successfully',
-        data : null
+        data: null
     })
 })
 
@@ -99,10 +99,14 @@ const forgotPassword = catchAsync(async (req: Request, res: Response) => {
     });
 });
 
-const resetPassword = catchAsync(async (req: Request, res: Response) => {
-    const token = req.headers.authorization || "";
+const resetPassword = catchAsync(async (req: Request & { user?: any }, res: Response) => {
+    // Extract token from Authorization header (remove "Bearer " prefix)
+    const authHeader = req.headers.authorization;
+    console.log(authHeader);
+    const token = authHeader ? authHeader.replace('Bearer ', '') : null;
+    const user = req.user; // Will be populated if authenticated via middleware
 
-    await AuthService.resetPassword(token, req.body);
+    await AuthService.resetPassword(token, req.body, user);
 
     sendResponse(res, {
         statusCode: httpStatus.OK,

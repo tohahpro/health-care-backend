@@ -62,12 +62,19 @@ const refreshToken = catchAsync(async (req: Request, res: Response) => {
         sameSite: "none",
         maxAge: 1000 * 60 * 60,
     });
+    res.cookie("refreshToken", refreshToken, {
+        secure: true,
+        httpOnly: true,
+        sameSite: "none",
+        maxAge: 1000 * 60 * 60 * 24 * 80
+    })
 
     sendResponse(res, {
         statusCode: httpStatus.OK,
         success: true,
         message: "Access token generated successfully!",
         data: {
+            result,
             message: "Access token generated successfully!",
         },
     });

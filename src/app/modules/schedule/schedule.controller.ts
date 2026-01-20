@@ -4,6 +4,7 @@ import sendResponse from "../../shared/sendResponse";
 import { ScheduleService } from "./schedule.service";
 import { pick } from "../../helper/pick";
 import { IJWTPayload } from "../../types";
+import httpStatus from "http-status";
 
 
 const insertIntoDB = catchAsync(async (req: Request, res: Response) => {
@@ -32,6 +33,17 @@ const schedulesForDoctor = catchAsync(async (req: Request & {user?: IJWTPayload}
     })
 });
 
+const getScheduleById = catchAsync(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const result = await ScheduleService.getScheduleById(id);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: 'Schedule retrieval successfully',
+        data: result,
+    });
+});
+
 const deleteScheduleFromDB = catchAsync(async (req: Request, res: Response) => {
     const scheduleId = req.params.id;
     
@@ -48,6 +60,7 @@ const deleteScheduleFromDB = catchAsync(async (req: Request, res: Response) => {
 export const ScheduleController = {
     insertIntoDB,
     schedulesForDoctor,
+    getScheduleById,
     deleteScheduleFromDB,
 
 }

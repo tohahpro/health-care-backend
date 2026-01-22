@@ -152,7 +152,38 @@ const getMyAppointments = async (user: IJWTPayload, filters: any, options: any) 
             [sortBy]: sortOrder
         },
         include: user.role === UserRole.Doctor ?
-            { patient: true } : { doctor: true }
+            { 
+                patient: true,
+                schedule: true,
+                prescription: true,
+                review: true,
+                payment: true,
+                doctor: {
+                    include: {
+                        doctorSpecialties: {
+                            include: {
+                                specialities: true
+                            }
+                        }
+                    }
+                },
+
+            } : { 
+                doctor: {
+                    include: {
+                        doctorSpecialties: {
+                            include: {
+                                specialities: true
+                            }
+                        }
+                    }
+                },
+                schedule: true,
+                prescription: true,
+                review: true,
+                payment: true,
+                patient: true
+            }
     })
 
     const total = await prisma.appointment.count({

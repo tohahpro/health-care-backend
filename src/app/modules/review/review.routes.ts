@@ -7,6 +7,6 @@ import { ReviewController } from './review.controller';
 const router = express.Router();
 
 router.post('/', auth(UserRole.Patient), ReviewController.insertIntoDB);
-
+router.get('/', ReviewController.getAllFromDB);
 
 export const ReviewRoutes = router;

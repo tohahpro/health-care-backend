@@ -6,6 +6,7 @@ import { prisma } from "../../shared/prisma";
 import { IJWTPayload } from "../../types";
 import { v4 as uuidv4 } from "uuid";
 import ApiError from "../../errors/ApiError";
+import { IAuthUser } from '../../interfaces/common';
 
 
 const createAppointment = async (user: IJWTPayload, payload: { doctorId: string, scheduleId: string }) => {
@@ -334,6 +335,131 @@ const cancelUnpaidAppointments = async () => {
 
 }
 
+const createAppointmentWithPayLater = async (user: IAuthUser, payload: any) => {
+    const patientData = await prisma.patient.findUniqueOrThrow({
+        where: {
+            email: user?.email
+        }
+    });
+
+    const doctorData = await prisma.doctor.findUniqueOrThrow({
+        where: {
+            id: payload.doctorId,
+            isDeleted: false
+        }
+    });
+
+    await prisma.doctorSchedules.findFirstOrThrow({
+        where: {
+            doctorId: doctorData.id,
+            scheduleId: payload.scheduleId,
+            isBooked: false
+        }
+    });
+
+    const videoCallingId = uuidv4();
+
+    const result = await prisma.$transaction(async (tnx) => {
+        const appointmentData = await tnx.appointment.create({
+            data: {
+                patientId: patientData.id,
+                doctorId: doctorData.id,
+                scheduleId: payload.scheduleId,
+                videoCallingID  : videoCallingId
+            },
+            include: {
+                patient: true,
+                doctor: true,
+                schedule: true
+            }
+        })
+
+        await tnx.doctorSchedules.update({
+            where: {
+                doctorId_scheduleId: {
+                    doctorId: doctorData.id,
+                    scheduleId: payload.scheduleId
+                }
+            },
+            data: {
+                isBooked: true
+            }
+        })
+
+        const transactionId = uuidv4();
+
+        await tnx.payment.create({
+            data: {
+                appointmentId: appointmentData.id,
+                amount: doctorData.appointmentFee,
+                transactionId
+            }
+        })
+
+        return appointmentData;
+    })
+
+    return result;
+};
+
+const initiatePaymentForAppointment = async (appointmentId: string, user: IAuthUser) => {
+    const patientData = await prisma.patient.findUniqueOrThrow({
+        where: {
+            email: user?.email
+        }
+    });
+
+    const appointment = await prisma.appointment.findUnique({
+        where: {
+            id: appointmentId,
+            patientId: patientData.id
+        },
+        include: {
+            payment: true,
+            doctor: true
+        }
+    });
+
+    if (!appointment) {
+        throw new ApiError(httpStatus.BAD_REQUEST, "Appointment not found or unauthorized");
+    }
+
+    if (appointment.paymentStatus !== PaymentStatus.Unpaid) {
+        throw new ApiError(httpStatus.BAD_REQUEST, "Payment already completed for this appointment");
+    }
+
+    if (appointment.status === AppointmentStatus.Cancelled) {
+        throw new ApiError(httpStatus.BAD_REQUEST, "Cannot pay for cancelled appointment");
+    }
+
+    // Create Stripe checkout session
+    const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        mode: "payment",
+        customer_email: user?.email || '',
+        line_items: [
+            {
+                price_data: {
+                    currency: "bdt",
+                    product_data: {
+                        name: `Appointment with ${appointment.doctor.name}`,
+                    },
+                    unit_amount: appointment.payment!.amount * 100,
+                },
+                quantity: 1,
+            },
+        ],
+        metadata: {
+            appointmentId: appointment.id,
+            paymentId: appointment.payment!.id
+        },
+        success_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/success`,
+        cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard/my-appointments`,
+    });
+
+    return { paymentUrl: session.url };
+};
+
 export const AppointmentService = {
     createAppointment,
     getMyAppointments,
@@ -341,4 +467,6 @@ export const AppointmentService = {
     getAppointmentsById,
     updateAppointmentStatus,
     cancelUnpaidAppointments,
+    createAppointmentWithPayLater,
+    initiatePaymentForAppointment
 };

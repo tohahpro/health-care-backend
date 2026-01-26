@@ -4,6 +4,7 @@ import auth from "../../middlewares/auth";
 import { UserRole } from "@prisma/client";
 import validateRequest from "../../middlewares/validateRequest";
 import { AppointmentValidation } from "./appointment.validation";
+import { paymentLimiter } from "../../middlewares/rateLimiter";
 
 const router = express.Router();
 
@@ -26,6 +27,20 @@ router.get(
   "/:id",
   auth(UserRole.Admin),
   AppointmentController.getAppointmentsById
+);
+
+router.post(
+    '/pay-later',
+    auth(UserRole.Patient),
+    validateRequest(AppointmentValidation.createAppointment),
+    AppointmentController.createAppointmentWithPayLater
+);
+
+router.post(
+    '/:id/initiate-payment',
+    auth(UserRole.Patient),
+    paymentLimiter,
+    AppointmentController.initiatePayment
 );
 
 router.patch(

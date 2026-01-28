@@ -100,7 +100,7 @@ const createAppointment = async (user: IJWTPayload, payload: { doctorId: string,
                 appointmentId: appointmentData.id,
                 paymentId: paymentData.id
             },
-            success_url: `http://localhost:3000`,
+            success_url: `http://localhost:3000/payment/success`,
             cancel_url: `http://localhost:3000/payment-failed`,
         });
 

@@ -4,103 +4,151 @@ import { IOptions, paginationHelper } from "../../helper/paginationHelper";
 import { Prisma, Schedule } from "@prisma/client";
 import { IJWTPayload } from "../../types";
 
+
+const convertDateTime = async (date: Date) => {
+    const offset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() + offset);
+}
+
 const insertIntoDB = async (payload: any) => {
 
-    const { startTime, endTime, startDate, endDate } = payload;
-    const intervalTime = 30;
-    const schedules = []
+    const { startDate, endDate, startTime, endTime } = payload;
 
-    const currentDate = new Date(startDate)
-    const lastDate = new Date(endDate)
+    const intervalTime = 30;
+
+    const schedules = [];
+
+    const currentDate = new Date(startDate); // start date
+    const lastDate = new Date(endDate) // end date
 
     while (currentDate <= lastDate) {
+        // 09:30  ---> ['09', '30']
         const startDateTime = new Date(
             addMinutes(
                 addHours(
-                    `${format(currentDate, "yyyy-MM-dd")}`,
-                    Number(startTime.split(":")[0]) // 11:00
+                    `${format(currentDate, 'yyyy-MM-dd')}`,
+                    Number(startTime.split(':')[0])
                 ),
-                Number(startTime.split(":")[1])
+                Number(startTime.split(':')[1])
             )
-
-        )
+        );
 
         const endDateTime = new Date(
             addMinutes(
                 addHours(
-                    `${format(currentDate, "yyyy-MM-dd")}`,
-                    Number(endTime.split(":")[0]) // 11:00
+                    `${format(currentDate, 'yyyy-MM-dd')}`,
+                    Number(endTime.split(':')[0])
                 ),
-                Number(endTime.split(":")[1])
+                Number(endTime.split(':')[1])
             )
-        )
+        );
 
-        while (startDateTime < endDateTime) {
-            const slotStartDateTime = startDateTime; // 10:00
-            const slotEndDateTime = addMinutes(startDateTime, intervalTime); // 10:30
+        while (startDateTime < endDateTime) {          
+            const start = await convertDateTime(startDateTime);
+            const end = await convertDateTime(addMinutes(startDateTime, intervalTime))
 
             const scheduleData = {
-                startDateTime: slotStartDateTime,
-                endDateTime: slotEndDateTime
+                startDateTime: start,
+                endDateTime: end
             }
 
             const existingSchedule = await prisma.schedule.findFirst({
-                where: scheduleData
-            })
+                where: {
+                    startDateTime: scheduleData.startDateTime,
+                    endDateTime: scheduleData.endDateTime
+                }
+            });
+
             if (!existingSchedule) {
                 const result = await prisma.schedule.create({
                     data: scheduleData
                 });
-
-                schedules.push(result)
+                schedules.push(result);
             }
 
-            slotStartDateTime.setMinutes(slotStartDateTime.getMinutes() + intervalTime)
+            startDateTime.setMinutes(startDateTime.getMinutes() + intervalTime);
         }
 
-        currentDate.setDate(currentDate.getDate() + 1)
+        currentDate.setDate(currentDate.getDate() + 1);
     }
+
     return schedules;
 }
 
 const schedulesForDoctor = async (user: IJWTPayload, options: IOptions, filters: any) => {
-    const { page, limit, skip, sortBy, sortOrder } = paginationHelper.calculatePagination(options)
-    const { startDateTime: filterStartDateTime, endDateTime: filterEndDateTime } = filters;
+    const { limit, page, skip } = paginationHelper.calculatePagination(options);
+    const { startDate, endDate, ...filterData } = filters;
 
-    const andConditions: Prisma.ScheduleWhereInput[] = [];
-    if (filterStartDateTime && filterEndDateTime) {
+    const andConditions = [];
+
+    if (startDate && endDate) {
+        // Both dates provided - find schedules within the date range
+        const startOfDay = new Date(startDate as string);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(endDate as string);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+
         andConditions.push({
-            AND: [
-                {
-                    startDateTime: {
-                        gte: filterStartDateTime
-                    }
-                },
-                {
-                    endDateTime: {
-                        lte: filterEndDateTime
-                    }
-                }
-            ]
-        })
+            startDateTime: {
+                gte: startOfDay,
+                lte: endOfDay
+            }
+        });
+    } else if (startDate) {
+        // Only start date - find schedules on that specific day
+        const startOfDay = new Date(startDate as string);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(startDate as string);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+
+        andConditions.push({
+            startDateTime: {
+                gte: startOfDay,
+                lte: endOfDay
+            }
+        });
+    } else if (endDate) {
+        // Only end date - find schedules on that specific day
+        const startOfDay = new Date(endDate as string);
+        startOfDay.setUTCHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(endDate as string);
+        endOfDay.setUTCHours(23, 59, 59, 999);
+
+        andConditions.push({
+            startDateTime: {
+                gte: startOfDay,
+                lte: endOfDay
+            }
+        });
     }
 
-    const whereConditions: Prisma.ScheduleWhereInput = andConditions.length > 0 ? {
-        AND: andConditions
-    } : {}
+    if (Object.keys(filterData).length > 0) {
+        andConditions.push({
+            AND: Object.keys(filterData).map(key => {
+                return {
+                    [key]: {
+                        equals: (filterData as any)[key],
+                    },
+                };
+            }),
+        });
+    }
+
+    const whereConditions: Prisma.ScheduleWhereInput =
+        andConditions.length > 0 ? { AND: andConditions } : {};
 
     const doctorSchedules = await prisma.doctorSchedules.findMany({
         where: {
             doctor: {
-                email: user.email
+                email: user?.email
             }
-        },
-        select: {
-            scheduleId : true
         }
-    })
+    });
 
-    const doctorScheduleIds = doctorSchedules.map(schedule => schedule.scheduleId)
+    const doctorScheduleIds = doctorSchedules.map(schedule => schedule.scheduleId);
 
     const result = await prisma.schedule.findMany({
         where: {
@@ -109,10 +157,14 @@ const schedulesForDoctor = async (user: IJWTPayload, options: IOptions, filters:
                 notIn: doctorScheduleIds
             }
         },
-        skip, take: limit,
-        orderBy: {
-            [sortBy]: sortOrder
-        }
+        skip,
+        take: limit,
+        orderBy:
+            options.sortBy && options.sortOrder
+                ? { [options.sortBy]: options.sortOrder }
+                : {
+                    createdAt: 'desc',
+                }
     });
 
     const total = await prisma.schedule.count({
@@ -126,10 +178,12 @@ const schedulesForDoctor = async (user: IJWTPayload, options: IOptions, filters:
 
     return {
         meta: {
-            page, limit, total
+            total,
+            page,
+            limit,
         },
-        data: result
-    }
+        data: result,
+    };
 }
 
 const getScheduleById = async (id: string): Promise<Schedule | null> => {

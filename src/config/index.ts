@@ -13,6 +13,7 @@ export default {
         api_key: process.env.API_KEY,
         api_secret: process.env.API_SECRET
     },
+    FRONTEND_URL: process.env.FRONTEND_URL,
     JWT:{
         JWT_ACCESS_SECRET : process.env.JWT_ACCESS_SECRET,
         JWT_ACCESS_EXPIRES : process.env.JWT_ACCESS_EXPIRES,

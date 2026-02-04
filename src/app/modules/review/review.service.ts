@@ -37,7 +37,7 @@ const insertIntoDB = async (user: IJWTPayload, payload: any) => {
         });
 
         const avgRating = await tnx.review.aggregate({
-            _avg:{
+            _avg: {
                 rating: true
             },
             where: {
@@ -116,8 +116,55 @@ const getAllFromDB = async (
     };
 };
 
+const getSingleFromDB = async (
+    doctorId: string,
+    options: IPaginationOptions,
+) => {
+    const { limit, page, skip } = paginationHelper.calculatePagination(options);
+
+    const user = await prisma.review.findMany({
+        where: {
+            doctorId: doctorId
+        }
+    })
+
+    const result = await prisma.review.findMany({
+        where: {
+            doctorId: doctorId,
+        },
+        skip,
+        take: limit,
+        orderBy:
+            options.sortBy && options.sortOrder
+                ? { [options.sortBy]: options.sortOrder }
+                : {
+                    createdAt: 'desc',
+                },
+        include: {
+            doctor: true,
+            patient: true,
+            appointment: true,
+        },
+    });
+    const total = await prisma.review.count({
+        where: {
+            doctorId: doctorId
+        }
+    });
+
+    return {
+        meta: {
+            total,
+            page,
+            limit,
+        },
+        data: result,
+    };
+};
+
 export const ReviewService = {
     insertIntoDB,
+    getSingleFromDB,
     getAllFromDB
 
 }

@@ -34,8 +34,22 @@ const getAllFromDB = catchAsync(async (req: Request, res: Response) => {
     });
 });
 
+const getSingleFromDB = catchAsync(async (req: Request, res: Response) => {
+    const userId = req.params.id;
+    const options = pick(req.query, ['limit', 'page', 'sortBy', 'sortOrder']);
+    const result = await ReviewService.getSingleFromDB(userId, options);
+    sendResponse(res, {
+        statusCode: httpStatus.OK,
+        success: true,
+        message: 'Reviews retrieval successfully',
+        meta: result.meta,
+        data: result.data,
+    });
+});
+
 
 export const ReviewController = {
     insertIntoDB,
+    getSingleFromDB,
     getAllFromDB
 }

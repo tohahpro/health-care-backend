@@ -8,5 +8,6 @@ const router = express.Router();
 
 router.post('/', auth(UserRole.Patient), ReviewController.insertIntoDB);
 router.get('/', ReviewController.getAllFromDB);
+router.get('/:id', ReviewController.getSingleFromDB);
 
 export const ReviewRoutes = router;
